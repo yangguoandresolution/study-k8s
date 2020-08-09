@@ -1,0 +1,66 @@
+这是我第一次参加社区项目，也是第一次记录学习过程。
+
+1 client 
+	client-go支持4种client客户端对象，分别是 ClientSet, DynamicClient, DiscoveryClient, 最终通过RESTclient完成与k8s的交互。
+
+Kubeconfig:
+Kubectl 通过kubeconfig完成连接指定k8s集群及认证
+k8s.io/client-go/tools/clientcmd: 本目录包含kubectl读取配置及解析配置的过程。
+
+疑问1：多集群配置文件合并后，kubectl如何根据配置文件操作
+kubectl可以通过命令行指定-s 而后完成连接指定集群
+
+RESTClient:
+基础client，其他类型的client基于此实现，RESTclient通过http client实现，
+
+
+在客户端实现了上述方法， 包括限流。
+
+谨记： resp, err:= client.Do(req)
+   Defer Resp.Body.Close()
+防止内存泄漏
+
+	ClientSet
+	k8s.io/client-go/kubernetes/clientset.go:
+
+
+
+DynamicClient:
+k8s.io/client-go/dynamic/simple.go
+
+
+DiscoveryClient:
+可以获取k8s group version resource, 并可以存储在本地，实现了客户端缓存。
+
+2 informer
+  Client-go的核心机制就是informer，K8s的其他组件，controller manager, kube-schedule, kubelet kube-proxy 均是使用informer获取资源对象变化。且informer实现了本地缓存，可以减少与kube-apiserver的交互，为大规模k8s集群提供了完善的处理机制。
+
+ Reflector:
+  使用List 和watch监控所有k8s资源
+  List获取资源对象，watch通过建立与kube-apiserver的长连接，完成对象更新的监听。
+ 
+
+
+list实现了分页式查询
+而后确认是否需要resync
+Watch资源对象，通过watchhandler处理add, update, delete
+DeltaFIFO:
+保存资源对象的操作类型
+Indexer:
+作为本地存储，其实是直接使用内存作为存储，保持与etcd数据的一致，减轻查询k8s apiserver的访问压，自带索引功能。其实数据结构是threadsafemap
+
+Informer:
+为每一种资源对象实现了一个Informer，
+
+Workqueue:
+Fifo  延迟队列， 限速队列
+
+限速队列的实现
+1.令牌桶算法
+2.排队指数算法
+3.计数器算法
+4.混合模式
+
+
+
+    
